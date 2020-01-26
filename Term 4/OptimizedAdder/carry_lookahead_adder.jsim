@@ -1,0 +1,224 @@
+.include "D:\Dropbox\SUTD\Sophomore\Computation Structures\Software labs\Courseware\50002\nominal.jsim"
+.include "D:\Dropbox\SUTD\Sophomore\Computation Structures\Software labs\Courseware\50002\stdcell.jsim"
+.include "C:\Users\deron\Desktop\Project-2D\checkoff2d\2dcheckoff_3ns.jsim"
+
+*************************************************************
+*************************************************************
+** subcircuit implementing an adder and P/G generator unit **
+**   inputs: a b inv_c                                     **
+**  outputs: g p s                                         **
+*************************************************************
+*************************************************************
+.subckt pgadder a b inv_c g p s
+
+* compute generate (g)
+Xnand2 a b inv_g nand2
+Xinv inv_g g inverter
+
+
+* compute propagate (p)
+Xxor2 a b p xor2
+
+
+* compute sum (s)
+Xxnor2 p inv_c s xnor2
+.ends
+
+
+
+***************************************************************************************
+***************************************************************************************
+** subcircuit implementing a carry and block P/G generator unit with inverted inputs **
+**   inputs: inv_ga inv_pa inv_gb inv_pb inv_cc                                      **
+**  outputs: gc pc ca cb                                                             **
+***************************************************************************************
+.subckt pgcarry1 inv_ga inv_pa ca inv_gb inv_pb cb gc pc inv_cc
+
+* compute gc = generate from bit i to bit k
+Xoai21a inv_pa inv_gb inv_ga gc oai21
+
+
+* compute ca = carry in of bit j+1
+Xoai21b inv_pb inv_cc inv_gb ca oai21
+
+
+* compute pc = propagate from bit i to bit k
+Xnor2 inv_pa inv_pb pc nor2
+
+
+* compute cb = carry in of bit i
+Xinv inv_cc cb inverter
+.ends
+
+
+
+****************************************************************************************
+****************************************************************************************
+** subcircuit implementing a carry and block P/G generator unit with inverted outputs **
+**   inputs: ga pa gb pb cc                                                           **
+**  outputs: inv_gc inv_pc inv_ca inv_cb                                              **
+****************************************************************************************
+****************************************************************************************
+.subckt pgcarry2 ga pa inv_ca gb pb inv_cb inv_gc inv_pc cc
+
+* compute inv_gc = inverted(generate from bit i to bit k)
+Xaoi21a pa gb ga inv_gc aoi21
+
+
+* compute inv_ca = inverted(carry in of bit j+1)
+Xaoi21b pb cc gb inv_ca aoi21
+
+
+* compute inv_pc = inverted(propagate from bit i to bit k)
+Xnand2 pa pb inv_pc nand2
+
+
+* compute cb = inverted(carry in of bit i)
+Xinv cc inv_cb inverter
+.ends 
+
+
+
+****************************************************************
+****************************************************************
+** subcircuit implementing a 2-bit adder with carry lookahead **
+**   inputs: a[1:0] b[1:0] c0                                 **
+**  outputs: s[1:0] g0_1 p0_1                                 **
+****************************************************************
+****************************************************************
+.subckt cla2 a[1:0] b[1:0] c0 s[1:0] g0_1 p0_1
+
+* carry lookahead unit with inverted outputs
+Xcarry g[1] p[1] inv_c[1] g[0] p[0] inv_c[0] g0_1 p0_1 c0 pgcarry2
+
+
+* adder units
+Xadder a[1:0] b[1:0] inv_c[1:0] g[1:0] p[1:0] s[1:0] pgadder
+.ends
+
+
+
+****************************************************************
+****************************************************************
+** subcircuit implementing a 4-bit adder with carry lookahead **
+**   inputs: a[3:0] b[3:0] inv_c0                             **
+**  outputs: s[3:0] g0_3 p0_3                                 **
+****************************************************************
+****************************************************************
+.subckt cla4 a[3:0] b[3:0] inv_c0 s[3:0] g0_3 p0_3
+
+* carry lookahead unit with inverted inputs
+Xcarry3 g2_3 p2_3 c2 g0_1 p0_1 c0 g0_3 p0_3 inv_c0 pgcarry1
+
+
+* cla2 units
+Xcla2a a[1:0] b[1:0] c0 s[1:0] g0_1 p0_1 cla2
+Xcla2b a[3:2] b[3:2] c2 s[3:2] g2_3 p2_3 cla2
+.ends
+
+
+
+****************************************************************
+****************************************************************
+** subcircuit implementing a 8-bit adder with carry lookahead **
+**   inputs: a[7:0] b[7:0] c0                                 **
+**  outputs: s[7:0] g0_7 p0_7                                 **
+****************************************************************
+****************************************************************
+.subckt cla8 a[7:0] b[7:0] c0 s[7:0] g0_7 p0_7
+
+* carry lookahead unit with inverted outputs
+Xcarry g4_7 p4_7 inv_c4 g0_3 p0_3 inv_c0 g0_7 p0_7 c0 pgcarry2
+
+
+* cla4 units
+Xcla4a a[3:0] b[3:0] inv_c0 s[3:0] g0_3 p0_3 cla4
+Xcla4b a[7:4] b[7:4] inv_c4 s[7:4] g4_7 p4_7 cla4
+.ends
+
+
+
+*****************************************************************
+*****************************************************************
+** subcircuit implementing a 16-bit adder with carry lookahead **
+**   inputs: a[15:0] b[15:0] inv_c0                            **
+**  outputs: s[15:0] g0_15 p0_15                               **
+*****************************************************************
+*****************************************************************
+.subckt cla16 a[15:0] b[15:0] inv_c0 s[15:0] g0_15 p0_15
+
+* carry lookahead unit with inverted inputs
+Xcarry g8_15 p8_15 c8 g0_7 p0_7 c0 g0_15 p0_15 inv_c0 pgcarry1
+
+
+* cl8 units
+Xcla8a a[7:0] b[7:0] c0 s[7:0] g0_7 p0_7 cla8
+Xcla8b a[15:8] b[15:8] c8 s[15:8] g8_15 p8_15 cla8
+.ends
+
+
+
+**********************************************************************************
+**********************************************************************************
+** subcircuit implementing a 32-bit adder with carry lookahead and carry select **
+**   inputs: op0 a[31:0] b[31:0]                                                **
+**  outputs: s[31:0] z v n                                                      **
+**********************************************************************************
+**********************************************************************************
+.subckt adder32 op0 a[31:0] b[31:0] s[31:0] z v n
+
+* buffer op0 to reduce delay
+Xbuffera op0 c0 buffer_8
+
+
+* convert B to 2's complement if op0 is 1
+Xxor2 b[31:0] c0#32 Xb[31:0] xor2
+
+
+* carry lookahead unit with inverted outputs
+Xcarry 0 0 inv_c16 g0_15 p0_15 inv_c0 g0_31 p0_31 c0 pgcarry2
+
+** g16_31 and p16_31 not required as g0_31 and p0_31 not important
+** if actual g0_31 and p0_31 are needed:
+** 	Xcarry g16_31 p16_31 inv_c16 g0_15 p0_15 inv_c0 g0_31 p0_31 c0 pgcarry2
+
+
+* add lower 16 bits with cla16
+Xcla16a a[15:0] Xb[15:0] inv_c0 s[15:0] g0_15 p0_15 cla16
+
+** if carry select is unnecessary:
+** 	a[31:16] Xb[31:16] inv_c16_ s[31:16] g16_31 p16_31 cla16
+
+
+* pre-compute higher 16 bits with cla16
+Xcla16b0 a[31:16] Xb[31:16] vdd s31_16_0[15:0] g16_31_0 p16_31_0 cla16
+Xcla16b1 a[31:16] Xb[31:16] 0 s31_16_1[15:0] g16_31_1 p16_31_1 cla16
+
+
+* select for higher 16 bits
+Xmux2a inv_c16#16 s31_16_1[15:0] s31_16_0[15:0] s[31:16] mux2
+
+** if g16_31 and p16_31 are needed (but mux will add delay):
+** 	Xmux2b inv_c16 g16_31_1 g16_31_0 g16_31 mux2 
+
+
+* connect N to s31
+.connect s[31] n
+
+
+* find Z using a nor4-nand4-nor2 cascade (0.305ns)
+Xnor4 s[31:24] s[23:16] s[15:8] s[7:0] stage1[7:0] nor4
+Xnand4 stage1[7:6] stage1[5:4] stage1[3:2] stage1[1:0] stage2[1:0] nand4
+Xnor2 stage2[1] stage2[0] z nor2
+
+
+* compute V (0.129ns)
+Xinva a[31] inv_a31 inverter
+Xinvb Xb[31] inv_Xb31 inverter
+Xinvc s[31] inv_s31 inverter
+Xnand3a a[31] Xb[31] inv_s31 va nand3
+Xnand3b inv_a31 inv_Xb31 s[31] vb nand3
+Xnand2 va vb v nand2
+
+.ends
+

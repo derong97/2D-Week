@@ -1,0 +1,98 @@
+.include "D:\Dropbox\SUTD\Sophomore\Computation Structures\Software labs\Courseware\50002\nominal.jsim"
+.include "D:\Dropbox\SUTD\Sophomore\Computation Structures\Software labs\Courseware\50002\stdcell.jsim"
+.include "C:\Users\deron\Desktop\Project-2D\checkoff2d\2dcheckoff_100ns.jsim"
+
+* PFA (1-bit)
+.subckt pfa a b c p g s
+Xg a b g and2
+Xp a b p xor2
+Xs p c s xor2 
+.ends
+
+* CLA4 (4-bit)
+.subckt cla4 A[3:0] B[3:0] c[0] s[3:0] p g
+Xpfa A[3:0] B[3:0] c[3:0] p[3:0] g[3:0] s[3:0] pfa
+
+Xand1 c[0] p[0] x0 and2
+Xor1 g[0] x0 c[1] or2
+
+Xand2 p[1] g[0] x1[0] and2
+Xand3 p[1] p[0] c[0] x1[1] and3
+Xor2 g[1] x1[0] x1[1] c[2] or3
+
+Xand4 p[2] g[1] x2[0] and2
+Xand5 p[2] p[1] g[0] x2[1] and3
+Xand6 p[2] p[1] p[0] c[0] x2[2] and4
+Xor3 g[2] x2[0] x2[1] x2[2] c[3] or4
+
+Xand7 p[3] p[2] p[1] p[0] p and4
+Xand8 p[3] g[2] x3[0] and2
+Xand9 p[3] p[2] g[1] x3[1] and3
+Xand10 p[3] p[2] p[1] g[0] x3[2] and4
+Xor4 g[3] x3[0] x3[1] x3[2] g or4
+
+.ends
+
+
+* CLA16 (16-bit)
+.subckt cla16 A[15:0] B[15:0] c[0] s[15:0] p g
+X1 A[3:0] B[3:0] c[0] s[3:0] p[0] g[0] CLA4
+X2 A[7:4] B[7:4] c[0] s[7:4] p[1] g[1] CLA4
+X3 A[11:8] B[11:8] c[0] s[11:8] p[2] g[2] CLA4
+X4 A[15:12] B[15:12] c[0] s[15:12] p[3] g[3] CLA4
+
+Xand1 c[0] p[0] x0 and2
+Xor1 g[0] x0 c[1] or2
+
+Xand2 p[1] g[0] x1[0] and2
+Xand3 p[1] p[0] c[0] x1[1] and3
+Xor2 g[1] x1[0] x1[1] c[2] or3
+
+Xand4 p[2] g[1] x2[0] and2
+Xand5 p[2] p[1] g[0] x2[1] and3
+Xand6 p[2] p[1] p[0] c[0] x2[2] and4
+Xor3 g[2] x2[0] x2[1] x2[2] c[3] or4
+
+Xand7 p[3] p[2] p[1] p[0] p and4
+Xand8 p[3] g[2] x3[0] and2
+Xand9 p[3] p[2] g[1] x3[1] and3
+Xand10 p[3] p[2] p[1] g[0] x3[2] and4
+Xor4 g[3] x3[0] x3[1] x3[2] g or4
+
+.ends
+
+
+* CLA32 (32-bit)
+.subckt adder32 op0 A[31:0] B[31:0] s[31:0] z v n
+
+* 2's complement
+Xxor2 B[31:0] op0#32 XB[31:0] xor2
+
+X1 A[15:0] XB[15:0] op0 s[15:0] p[0] g[0] cla16
+X2 A[31:16] XB[31:16] c16 s[31:16] p[1] g[1] cla16
+
+Xand1 op0 p[0] x0 and2
+Xor1 g[0] x0 c16 or2
+
+Xand2 p[1] g[0] x1[0] and2
+Xand3 p[1] p[0] op0 x1[1] and3
+Xor2 g[1] x1[0] x1[1] c32 or3
+
+* Get Z
+X8or4 s[0:7] s[8:15] s[16:23] s[24:31] o[0:7] or4
+X2_1or4 o[0] o[1] o[2] o[3] z0 or4
+X2_2or4 o[4] o[5] o[6] o[7] z1 or4
+Xnor2 z0 z1 z nor2
+
+* Get V
+Xs31_inv s[31] l inverter
+Xa31_inv A[31] j inverter
+Xb31_inv XB[31] k inverter
+Xv0 A[31] XB[31] l v0 and3
+Xv1 j k s[31] v1 and3
+Xv v0 v1 v or2
+
+* Get N
+.connect s[31] n
+
+.ends
